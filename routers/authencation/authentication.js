@@ -34,7 +34,7 @@ const User = mongoose.model("User", {
   },
   gender: {
     type: String,
-    enum: ["male", "female", "other"],
+    enum: ["Nam", "Nữ", "other"],
   },
   phoneNumber: {
     type: String,
@@ -48,7 +48,7 @@ const User = mongoose.model("User", {
 });
 
 // Đăng ký tài khoản
-router.post("/register", async (req, res) => {
+router.post("/user/signup", async (req, res) => {
   try {
     const { username, password, email, role } = req.body;
 
@@ -86,7 +86,7 @@ router.post("/register", async (req, res) => {
 });
 
 // Đăng nhập
-router.post("/login", async (req, res) => {
+router.post("/user/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -115,7 +115,6 @@ router.post("/login", async (req, res) => {
 // Middleware xác thực token
 const authenticateToken = (req, res, next) => {
   const token = req.headers["authorization"];
-  console.log(token.split(" ")[1]);
   if (!token) {
     return res.status(401).json({ message: "No token provided" });
   }
@@ -132,7 +131,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // CRUD: Lấy thông tin người dùng
-router.get("/users", authenticateToken, async (req, res) => {
+router.get("/user", authenticateToken, async (req, res) => {
   try {
     const { username } = req.user; // Lấy thông tin người dùng từ xác thực
     // console.log(username);
@@ -147,7 +146,7 @@ router.get("/users", authenticateToken, async (req, res) => {
 });
 
 // CRUD: Cập nhật thông tin người dùng
-router.put("/users", authenticateToken, async (req, res) => {
+router.put("/user", authenticateToken, async (req, res) => {
   try {
     const { username } = req.user;
     const user = await User.findOneAndUpdate({ username }, req.body, {

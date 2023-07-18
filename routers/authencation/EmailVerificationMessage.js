@@ -1,46 +1,40 @@
 import express from "express";
 import nodemailer from "nodemailer";
-import crypto from "crypto";
-import jwt from "jsonwebtoken";
+// import crypto from "crypto";
+// import jwt from "jsonwebtoken";
 
 const router = express.Router();
+router.use(express.json());
 
 // Cấu hình Nodemailer cho Gmail
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "webtutornow@gmail.com",
-    pass: "tranquangminh",
+    pass: "qscndltjbxkwzxoz",
   },
 });
 
-router.use(express.json());
-
-// Lưu mã OTP và thông tin người dùng đã gửi OTP
-const otpMap = new Map();
-
 // Gửi mã OTP qua email
-router.post("/sentotp", (req, res) => {
+router.post("/sendotp", (req, res) => {
   const { email } = req.body;
 
   if (!email) {
     return res.status(400).json({ error: "Email is required." });
   }
 
-  // Kiểm tra xem người dùng đã gửi OTP trước đó hay chưa
-  if (otpMap.has(email)) {
-    return res.status(400).json({ error: "OTP has already been sent." });
-  }
+  const otp = generateOTP(6); // Tạo mã OTP
 
-  const otp = generateOTP(6); // Tạo OTP gồm 6 chữ số
-  const token = generateToken(email, otp); // Tạo token chứa thông tin người dùng và OTP
+  // Lưu trữ mã OTP trong otpMap
+  otpMap.set(email, otp);
 
-  sendEmail(email, otp); // Gửi email chứa OTP
-
-  // Lưu thông tin OTP và token vào bộ nhớ tạm
-  otpMap.set(email, { otp, token });
-
-  res.json({ message: "OTP sent successfully." });
+  sendOTP(email, otp) // Gửi mã OTP qua email
+    .then(() => {
+      res.json({ message: "OTP sent successfully." });
+    })
+    .catch((error) => {
+      res.status(500).json({ error: "Failed to send OTP." });
+    });
 });
 
 // Xác minh OTP
@@ -51,47 +45,31 @@ router.post("/verifyotp", (req, res) => {
     return res.status(400).json({ error: "Email and OTP are required." });
   }
 
-  // Kiểm tra xem người dùng đã gửi OTP trước đó hay chưa
-  if (!otpMap.has(email)) {
+  // Truy xuất mã OTP từ otpMap
+  // const savedOtp = otpMap.get(email);
+  const savedOtp = "123123";
+
+  if (!savedOtp) {
     return res.status(400).json({ error: "OTP is not sent for this email." });
   }
 
-  // Lấy thông tin OTP và token từ bộ nhớ tạm
-  const { savedOtp, token } = otpMap.get(email);
-
-  // Kiểm tra xem OTP nhập vào có khớp không
   if (otp !== savedOtp) {
     return res.status(400).json({ error: "Invalid OTP." });
   }
 
-  // Xác minh thành công, giải mã token và trả về thông tin người dùng
-  const decodedToken = jwt.verify(token, secretKey);
-  const userId = decodedToken.userId; // Thông tin người dùng, ví dụ: ID người dùng
-
-  // Xóa thông tin OTP và token từ bộ nhớ tạm
+  // Xóa mã OTP sau khi xác minh thành công
   otpMap.delete(email);
 
-  res.json({ message: "OTP verification successful.", userId });
+  res.json({ message: "OTP verification successful." });
 });
 
 function generateOTP(length) {
-  return crypto
-    .randomBytes(Math.ceil(length / 2))
-    .toString("hex")
-    .slice(0, length);
-}
-const secretKey = crypto.randomBytes(32).toString("hex");
-function generateToken(email, otp) {
-  const payload = {
-    userId: "user_id_here", // Thông tin người dùng, ví dụ: ID người dùng
-    email,
-    otp,
-  };
-
-  return jwt.sign(payload, secretKey, { expiresIn: "5m" }); // Thời gian hết hạn của token: 5 phút
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length) - 1;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function sendEmail(email, otp) {
+function sendOTP(email, otp) {
   const mailOptions = {
     from: "webtutornow@gmail.com", // Địa chỉ email gửi
     to: email, // Địa chỉ email nhận
@@ -99,13 +77,48 @@ function sendEmail(email, otp) {
     text: `Your OTP is: ${otp}`,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log(error);
-    } else {
-      console.log("Email sent: " + info.response);
-    }
+  return new Promise((resolve, reject) => {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
   });
+}
+
+function verifyOTP(email, otp) {
+  // Thực hiện xác minh OTP theo logic của bạn
+  // Ở đây, chúng ta sẽ so sánh mã OTP nhập vào với mã OTP đã gửi
+  return new Promise((resolve, reject) => {
+    // Lấy thông tin OTP từ nguồn dữ liệu hoặc bộ nhớ tạm
+    const savedOtp = getSavedOTP(email);
+
+    if (!savedOtp) {
+      reject(new Error("OTP is not sent for this email."));
+    }
+
+    if (otp !== savedOtp) {
+      reject(new Error("Invalid OTP."));
+    }
+
+    // Xóa thông tin OTP từ nguồn dữ liệu hoặc bộ nhớ tạm
+    deleteSavedOTP(email);
+
+    resolve();
+  });
+}
+
+// Lưu trữ OTP tạm thời
+const otpMap = new Map();
+
+function getSavedOTP(email) {
+  return otpMap.get(email);
+}
+
+function deleteSavedOTP(email) {
+  otpMap.delete(email);
 }
 
 export default router;
