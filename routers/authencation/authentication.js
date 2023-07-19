@@ -2,8 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
-import crypto from "crypto";
+import bodyParser from "body-parser";
 const router = express.Router();
 
 router.use(express.json());
@@ -130,6 +129,34 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+router.get("/getalluser", async (req, res) => {
+  try {
+    const { query } = req;
+    const user = await User.find(query);
+    res.status(200).send(user);
+  } catch (error) {
+    console.log("error:", error);
+    res.status(500).send("Lỗi server");
+  }
+});
+
+// GetUser By Id
+router.get("/users/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error retrieving user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 // CRUD: Lấy thông tin người dùng
 router.get("/user", authenticateToken, async (req, res) => {
   try {
@@ -163,4 +190,53 @@ router.put("/user", authenticateToken, async (req, res) => {
   }
 });
 
+router.use(bodyParser.urlencoded({ extended: true }));
+router.use(bodyParser.json());
+
+router.post("/change-password", authenticateToken, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  // Tìm người dùng trong cơ sở dữ liệu
+  User.findOne({ username: req.user.username }, (err, user) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    // So sánh mật khẩu hiện tại
+    bcrypt.compare(currentPassword, user.password, (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+
+      if (!result) {
+        return res.status(401).json({ error: "Invalid current password" });
+      }
+
+      // Mã hóa mật khẩu mới
+      bcrypt.hash(newPassword, saltRounds, (err, hashedPassword) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Internal Server Error" });
+        }
+
+        // Cập nhật mật khẩu mới
+        user.password = hashedPassword;
+        user.save((err) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Internal Server Error" });
+          }
+
+          res.status(200).json({ message: "Password changed successfully" });
+        });
+      });
+    });
+  });
+});
 export default router;

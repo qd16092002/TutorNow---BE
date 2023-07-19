@@ -46,8 +46,8 @@ router.post("/documents", async (req, res) => {
 });
 router.get("/documents", async (req, res) => {
   try {
-    const documents = await Documents.find();
-
+    const { query } = req;
+    const documents = await Documents.find(query);
     res.status(200).send(documents);
   } catch (error) {
     console.log("error:", error);
@@ -58,7 +58,6 @@ router.get("/documents/:id", async (req, res) => {
   try {
     const documentId = req.params.id;
     const document = await Documents.findById(documentId);
-
     res.status(200).json(document);
   } catch (error) {
     console.error("Error retrieving user:", error);

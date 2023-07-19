@@ -76,8 +76,8 @@ router.post("/calendar", async (req, res) => {
 });
 router.get("/calendar", async (req, res) => {
   try {
-    const calendar = await Calendar.find();
-
+    const { query } = req;
+    const calendar = await Calendar.find(query);
     res.status(200).send(calendar);
   } catch (error) {
     console.log("error:", error);
