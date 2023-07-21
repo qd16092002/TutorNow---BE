@@ -8,30 +8,39 @@ router.use(express.json());
 const Calendar = mongoose.model("Calendar", {
   nameStudent: {
     type: String,
+    required: true,
   },
   codeClass: {
     type: String,
+    required: true,
   },
   subject: {
     type: String,
+    required: true,
   },
   nameTutor: {
     type: String,
+    required: true,
   },
   time: {
     type: String,
+    required: true,
   },
   numberoflessonslaeared: {
     type: String,
+    required: true,
   },
   location: {
     type: String,
+    required: true,
   },
   cost: {
     type: String,
+    required: true,
   },
   phonenuberstudent: {
     type: String,
+    required: true,
   },
 });
 

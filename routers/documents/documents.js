@@ -8,15 +8,24 @@ router.use(express.json());
 const Documents = mongoose.model("Documents", {
   subject: {
     type: String,
+    required: true,
   },
   grade: {
     type: String,
+    required: true,
   },
   lever: {
     type: String,
+    required: true,
   },
   file: {
     type: String,
+    required: true,
+  },
+  status: {
+    type: String,
+    enum: ["active", "inactive"], // Một số giá trị trạng thái bạn muốn sử dụng
+    default: "active", // Trạng thái mặc định khi tạo tài liệu mới
   },
 });
 
@@ -61,6 +70,19 @@ router.get("/documents/:id", async (req, res) => {
     res.status(200).json(document);
   } catch (error) {
     console.error("Error retrieving user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+router.delete("/documents/:id", async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const deletedCalendar = await Documents.findByIdAndDelete(documentId);
+    if (!deletedCalendar) {
+      return res.status(404).json({ message: "Documents not found" });
+    }
+    res.status(200).json({ message: "Documents deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting document:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
