@@ -104,4 +104,17 @@ router.get("/calendar/:id", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+router.delete("/calendar/:id", async (req, res) => {
+  try {
+    const calendarId = req.params.id;
+    const deletedCalendar = await Calendar.findByIdAndDelete(calendarId);
+    if (!deletedCalendar) {
+      return res.status(404).json({ message: "Calendar not found" });
+    }
+    res.status(200).json({ message: "Calendar deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting document:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 export default router;
